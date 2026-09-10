@@ -17,7 +17,7 @@
   .serif{font-family:'Cormorant Garamond',serif}
 
   #hero{position:relative;height:100vh;overflow:hidden}
-  #scene{position:absolute;inset:0;display:block}
+  #scene{position:absolute;inset:0;display:block;width:100%;height:100%}
   .hero-copy{position:absolute;z-index:2;left:8vw;bottom:18vh;max-width:620px;pointer-events:none}
   .hero-copy h1{font-size:clamp(3rem,8vw,6.5rem);line-height:.95;letter-spacing:.02em}
   .hero-copy h1 em{color:var(--caramel)}
@@ -82,117 +82,138 @@
 import * as THREE from 'three';
 
 const canvas = document.getElementById('scene');
+
 let renderer;
 try {
-  renderer = new THREE.WebGLRenderer({canvas, antialias:true, alpha:true});
-} catch(e) {
-  // No WebGL — graceful static fallback gradient
+  renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+} catch (e) {
   canvas.style.background = 'radial-gradient(ellipse at 60% 40%, #F2E7D3 0%, #D8D1BB 55%, #948B64 100%)';
 }
+
 if (renderer) {
-renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
-renderer.setSize(innerWidth, innerHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+  renderer.setSize(window.innerWidth, window.innerHeight);
 
-const scene = new THREE.Scene();
-scene.fog = new THREE.Fog(0xD8D1BB, 8, 22);
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0xD8D1BB);
+  scene.fog = new THREE.Fog(0xD8D1BB, 10, 26);
 
-const camera = new THREE.PerspectiveCamera(45, innerWidth/innerHeight, .1, 100);
-camera.position.set(0, 0, 9);
+  const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+  camera.position.set(0, 0, 9);
 
-scene.add(new THREE.AmbientLight(0xF2E7D3, 1.1));
-const key = new THREE.DirectionalLight(0xfff2dd, 2.4); key.position.set(6,8,6); scene.add(key);
-const rim = new THREE.DirectionalLight(0xA65C28, 1.2); rim.position.set(-6,-3,-4); scene.add(rim);
+  scene.add(new THREE.AmbientLight(0xF2E7D3, 1.2));
+  const key = new THREE.DirectionalLight(0xfff2dd, 2.4);
+  key.position.set(6, 8, 6);
+  scene.add(key);
+  const rim = new THREE.DirectionalLight(0xA65C28, 1.4);
+  rim.position.set(-6, -3, -4);
+  scene.add(rim);
 
-const heroGroup = new THREE.Group(); scene.add(heroGroup);
+  // shift bean right so hero text (left) stays clear
+  const heroGroup = new THREE.Group();
+  heroGroup.position.set(2.2, 0.4, 0);
+  scene.add(heroGroup);
 
-// Central coffee bean-like shape: squashed sphere pair
-const bean = new THREE.Group();
-const beanMat = new THREE.MeshStandardMaterial({color:0x6E5544, roughness:.45, metalness:.1});
-for (const s of [-1,1]) {
-  const g = new THREE.SphereGeometry(1.05, 48, 48);
-  g.scale(1, .62, .78);
-  const m = new THREE.Mesh(g, beanMat);
-  m.position.set(0, s*.13, 0);
-  bean.add(m);
-}
-// crease
-const crease = new THREE.Mesh(
-  new THREE.TorusGeometry(1.02, .06, 12, 60, Math.PI),
-  new THREE.MeshStandardMaterial({color:0x3A2417, roughness:.6})
-);
-crease.rotation.z = Math.PI/2; crease.scale.set(1,.5,.6);
-bean.add(crease);
-bean.rotation.set(.5,.3,.2);
-heroGroup.add(bean);
-
-// Floating particles — coffee beans orbiting
-const particles = [];
-const pGeos = [];
-for (let i=0;i<14;i++){
-  const g = new THREE.SphereGeometry(.09+Math.random()*.12, 24, 24);
-  g.scale(1,.6,.8);
-  pGeos.push(g);
-}
-const orbit = new THREE.Group();
-for (let i=0;i<14;i++){
-  const m = new THREE.Mesh(pGeos[i], new THREE.MeshStandardMaterial({
-    color: i%3===0 ? 0xA65C28 : 0x948B64, roughness:.5
-  }));
-  const a = Math.random()*Math.PI*2, r = 2.6+Math.random()*1.8;
-  m.userData = {a, r, y:(Math.random()-.5)*3.5, sp:.15+Math.random()*.35,
-    rot:{x:Math.random()*.02,y:Math.random()*.02}};
-  orbit.add(m); particles.push(m);
-}
-heroGroup.add(orbit);
-
-// Slow-drifting rings (organic curves)
-const rings = [];
-for (let i=0;i<3;i++){
-  const r = new THREE.Mesh(
-    new THREE.TorusGeometry(2.2+i*.9, .012, 8, 120),
-    new THREE.MeshBasicMaterial({color:0x948B64, transparent:true, opacity:.35})
-  );
-  r.rotation.x = 1.2 + i*.15;
-  heroGroup.add(r); rings.push(r);
-}
-
-let mx=0, my=0;
-addEventListener('pointermove', e=>{
-  mx = (e.clientX/innerWidth - .5);
-  my = (e.clientY/innerHeight - .5);
-});
-
-addEventListener('resize', ()=>{
-  camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix();
-  renderer.setSize(innerWidth, innerHeight);
-});
-
-const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
-const clock = new THREE.Clock();
-let scrollY = 0;
-addEventListener('scroll', ()=>{ scrollY = window.scrollY; });
-
-function tick(){
-  requestAnimationFrame(tick);
-  const t = clock.getElapsedTime();
-  if (!reduced){
-    bean.rotation.y += .004;
-    bean.position.y = Math.sin(t*.8)*.18;
-    particles.forEach(p=>{
-      p.userData.a += p.userData.sp*.008;
-      p.position.set(Math.cos(p.userData.a)*p.userData.r, p.userData.y + Math.sin(t+p.userData.r)*.25, Math.sin(p.userData.a)*p.userData.r);
-      p.rotation.x += p.userData.rot.x; p.rotation.y += p.userData.rot.y;
-    });
-    rings[1].rotation.z = t*.06; rings[2].rotation.z = -t*.04;
+  // Central coffee bean
+  const bean = new THREE.Group();
+  const beanMat = new THREE.MeshStandardMaterial({ color: 0x6E5544, roughness: 0.45, metalness: 0.1 });
+  for (const s of [-1, 1]) {
+    const g = new THREE.SphereGeometry(1.05, 48, 48);
+    g.scale(1, 0.62, 0.78);
+    const m = new THREE.Mesh(g, beanMat);
+    m.position.y = s * 0.13;
+    bean.add(m);
   }
-  // mouse parallax + scroll lift
-  camera.position.x += (mx*1.4 - camera.position.x)*.04;
-  camera.position.y += (-my*.9 - camera.position.y)*.04;
-  camera.lookAt(0,0,0);
-  heroGroup.position.y = scrollY*.004;
+  const crease = new THREE.Mesh(
+    new THREE.TorusGeometry(1.0, 0.07, 12, 64, Math.PI),
+    new THREE.MeshStandardMaterial({ color: 0x3A2417, roughness: 0.6 })
+  );
+  crease.rotation.z = Math.PI / 2;
+  crease.scale.set(1, 0.5, 0.6);
+  bean.add(crease);
+  bean.rotation.set(0.5, 0.3, 0.2);
+  heroGroup.add(bean);
+
+  // Orbiting mini beans
+  const orbit = new THREE.Group();
+  const particles = [];
+  for (let i = 0; i < 14; i++) {
+    const g = new THREE.SphereGeometry(0.09 + Math.random() * 0.12, 24, 24);
+    g.scale(1, 0.6, 0.8);
+    const m = new THREE.Mesh(g, new THREE.MeshStandardMaterial({
+      color: i % 3 === 0 ? 0xA65C28 : 0x948B64, roughness: 0.5
+    }));
+    m.userData = {
+      a: Math.random() * Math.PI * 2,
+      r: 2.6 + Math.random() * 1.8,
+      y: (Math.random() - 0.5) * 3.5,
+      sp: 0.15 + Math.random() * 0.35,
+      rx: Math.random() * 0.02,
+      ry: Math.random() * 0.02
+    };
+    orbit.add(m);
+    particles.push(m);
+  }
+  heroGroup.add(orbit);
+
+  // Drifting rings
+  const rings = [];
+  for (let i = 0; i < 3; i++) {
+    const r = new THREE.Mesh(
+      new THREE.TorusGeometry(2.2 + i * 0.9, 0.012, 8, 120),
+      new THREE.MeshBasicMaterial({ color: 0x948B64, transparent: true, opacity: 0.35 })
+    );
+    r.rotation.x = 1.2 + i * 0.15;
+    heroGroup.add(r);
+    rings.push(r);
+  }
+
+  let mx = 0, my = 0;
+  window.addEventListener('pointermove', (e) => {
+    mx = e.clientX / window.innerWidth - 0.5;
+    my = e.clientY / window.innerHeight - 0.5;
+  });
+
+  window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const clock = new THREE.Clock();
+  let scrollY = 0;
+  window.addEventListener('scroll', () => { scrollY = window.scrollY; }, { passive: true });
+
+  function tick() {
+    requestAnimationFrame(tick);
+    const t = clock.getElapsedTime();
+    if (!reduced) {
+      bean.rotation.y += 0.004;
+      bean.position.y = Math.sin(t * 0.8) * 0.18;
+      for (const p of particles) {
+        p.userData.a += p.userData.sp * 0.008;
+        p.position.set(
+          Math.cos(p.userData.a) * p.userData.r,
+          p.userData.y + Math.sin(t + p.userData.r) * 0.25,
+          Math.sin(p.userData.a) * p.userData.r
+        );
+        p.rotation.x += p.userData.rx;
+        p.rotation.y += p.userData.ry;
+      }
+      rings[1].rotation.z = t * 0.06;
+      rings[2].rotation.z = -t * 0.04;
+    }
+    camera.position.x += (mx * 1.4 - camera.position.x) * 0.04;
+    camera.position.y += (-my * 0.9 - camera.position.y) * 0.04;
+    camera.lookAt(heroGroup.position.x * 0.7, 0, 0);
+    heroGroup.position.y = 0.4 + scrollY * 0.004;
+    renderer.render(scene, camera);
+  }
+
+  // render one frame immediately, then loop
   renderer.render(scene, camera);
-}
-// WebGL fallback handled above; close the if(renderer) guard
+  tick();
 }
 </script>
 </body>
