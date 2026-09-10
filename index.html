@@ -82,7 +82,14 @@
 import * as THREE from 'three';
 
 const canvas = document.getElementById('scene');
-const renderer = new THREE.WebGLRenderer({canvas, antialias:true, alpha:true});
+let renderer;
+try {
+  renderer = new THREE.WebGLRenderer({canvas, antialias:true, alpha:true});
+} catch(e) {
+  // No WebGL — graceful static fallback gradient
+  canvas.style.background = 'radial-gradient(ellipse at 60% 40%, #F2E7D3 0%, #D8D1BB 55%, #948B64 100%)';
+}
+if (renderer) {
 renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
 renderer.setSize(innerWidth, innerHeight);
 
@@ -185,7 +192,8 @@ function tick(){
   heroGroup.position.y = scrollY*.004;
   renderer.render(scene, camera);
 }
-tick();
+// WebGL fallback handled above; close the if(renderer) guard
+}
 </script>
 </body>
 </html>
