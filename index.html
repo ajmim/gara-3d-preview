@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>gara coffee — slow craft, warm light</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400&family=Inter:wght@300;400&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --sand:#D8D1BB; --taupe:#948B64; --espresso:#3A2417;
+    --caramel:#A65C28; --cream:#F2E7D3; --forest:#334124;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{background:var(--sand);color:var(--espresso);font-family:'Inter',sans-serif;font-weight:300;overflow-x:hidden}
+  .serif{font-family:'Cormorant Garamond',serif}
+
+  #hero{position:relative;height:100vh;overflow:hidden}
+  #scene{position:absolute;inset:0;display:block}
+  .hero-copy{position:absolute;z-index:2;left:8vw;bottom:18vh;max-width:620px;pointer-events:none}
+  .hero-copy h1{font-size:clamp(3rem,8vw,6.5rem);line-height:.95;letter-spacing:.02em}
+  .hero-copy h1 em{color:var(--caramel)}
+  .hero-copy p{margin-top:1.2rem;font-size:1.05rem;color:#5a4636;max-width:420px}
+  .cta{display:inline-block;margin-top:2rem;padding:.9rem 2.2rem;background:var(--espresso);color:var(--cream);
+    text-decoration:none;font-size:.8rem;letter-spacing:.18em;text-transform:uppercase;border-radius:2px;transition:background .3s}
+  .cta:hover{background:var(--caramel)}
+  .scroll-hint{position:absolute;bottom:2rem;left:50%;transform:translateX(-50%);z-index:2;
+    font-size:.65rem;letter-spacing:.3em;text-transform:uppercase;color:#7a6b52;opacity:.7;animation:pulse 2.4s infinite}
+  @keyframes pulse{0%,100%{opacity:.35}50%{opacity:.85}}
+
+  nav{position:absolute;top:0;left:0;right:0;z-index:3;display:flex;justify-content:space-between;align-items:center;padding:1.6rem 8vw}
+  nav .logo{font-size:1.5rem;color:var(--espresso);text-decoration:none}
+  nav ul{display:flex;gap:2.5rem;list-style:none;font-size:.78rem;letter-spacing:.15em;text-transform:uppercase}
+  nav a{color:#5a4636;text-decoration:none}
+  nav a:hover{color:var(--caramel)}
+
+  section.after{padding:9rem 8vw;background:var(--cream)}
+  section.after h2{font-size:2.6rem;margin-bottom:1rem}
+  .cards{display:flex;gap:2rem;margin-top:3rem;flex-wrap:wrap}
+  .card{flex:1 1 240px;background:var(--sand);border-radius:8px;padding:2.2rem}
+  .card h3{font-size:1.5rem;margin-bottom:.6rem;color:var(--caramel)}
+  .card p{font-size:.92rem;color:#5a4636}
+  footer{padding:2.5rem 8vw;background:var(--espresso);color:var(--cream);font-size:.75rem;letter-spacing:.1em}
+
+  @media (prefers-reduced-motion: reduce){ .scroll-hint{animation:none} }
+</style>
+</head>
+<body>
+
+<nav>
+  <a class="logo serif" href="#">gara</a>
+  <ul><li><a href="#craft">craft</a></li><li><a href="#beans">beans</a></li><li><a href="#visit">visit</a></li></ul>
+</nav>
+
+<div id="hero">
+  <canvas id="scene"></canvas>
+  <div class="hero-copy">
+    <h1 class="serif">slow craft,<br><em>warm light.</em></h1>
+    <p>Single-origin beans, roasted in small batches and poured with intention. Welcome to gara coffee.</p>
+    <a class="cta" href="#beans">taste the season</a>
+  </div>
+  <div class="scroll-hint">scroll</div>
+</div>
+
+<section class="after" id="craft">
+  <h2 class="serif">the craft</h2>
+  <p style="max-width:520px">Every cup starts with beans chosen at origin and roasted slowly to bring out caramel depth, soft acidity, and a clean finish.</p>
+  <div class="cards" id="beans">
+    <div class="card"><h3 class="serif">origin</h3><p>Direct relationships with growers across the highlands. Traceable to the farm.</p></div>
+    <div class="card"><h3 class="serif">roast</h3><p>Small batches, roasted weekly on vintage drum roasters. Never rushed.</p></div>
+    <div class="card"><h3 class="serif">pour</h3><p>Precision brews, ceramic vessels, and quiet mornings. Coffee as ritual.</p></div>
+  </div>
+</section>
+
+<footer id="visit">gara coffee · mha collective · zürich — © 2026</footer>
+
+<script type="importmap">
+{ "imports": { "three": "https://unpkg.com/three@0.170.0/build/three.module.js" } }
+</script>
+<script type="module">
+import * as THREE from 'three';
+
+const canvas = document.getElementById('scene');
+const renderer = new THREE.WebGLRenderer({canvas, antialias:true, alpha:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
+renderer.setSize(innerWidth, innerHeight);
+
+const scene = new THREE.Scene();
+scene.fog = new THREE.Fog(0xD8D1BB, 8, 22);
+
+const camera = new THREE.PerspectiveCamera(45, innerWidth/innerHeight, .1, 100);
+camera.position.set(0, 0, 9);
+
+scene.add(new THREE.AmbientLight(0xF2E7D3, 1.1));
+const key = new THREE.DirectionalLight(0xfff2dd, 2.4); key.position.set(6,8,6); scene.add(key);
+const rim = new THREE.DirectionalLight(0xA65C28, 1.2); rim.position.set(-6,-3,-4); scene.add(rim);
+
+const heroGroup = new THREE.Group(); scene.add(heroGroup);
+
+// Central coffee bean-like shape: squashed sphere pair
+const bean = new THREE.Group();
+const beanMat = new THREE.MeshStandardMaterial({color:0x6E5544, roughness:.45, metalness:.1});
+for (const s of [-1,1]) {
+  const g = new THREE.SphereGeometry(1.05, 48, 48);
+  g.scale(1, .62, .78);
+  const m = new THREE.Mesh(g, beanMat);
+  m.position.set(0, s*.13, 0);
+  bean.add(m);
+}
+// crease
+const crease = new THREE.Mesh(
+  new THREE.TorusGeometry(1.02, .06, 12, 60, Math.PI),
+  new THREE.MeshStandardMaterial({color:0x3A2417, roughness:.6})
+);
+crease.rotation.z = Math.PI/2; crease.scale.set(1,.5,.6);
+bean.add(crease);
+bean.rotation.set(.5,.3,.2);
+heroGroup.add(bean);
+
+// Floating particles — coffee beans orbiting
+const particles = [];
+const pGeos = [];
+for (let i=0;i<14;i++){
+  const g = new THREE.SphereGeometry(.09+Math.random()*.12, 24, 24);
+  g.scale(1,.6,.8);
+  pGeos.push(g);
+}
+const orbit = new THREE.Group();
+for (let i=0;i<14;i++){
+  const m = new THREE.Mesh(pGeos[i], new THREE.MeshStandardMaterial({
+    color: i%3===0 ? 0xA65C28 : 0x948B64, roughness:.5
+  }));
+  const a = Math.random()*Math.PI*2, r = 2.6+Math.random()*1.8;
+  m.userData = {a, r, y:(Math.random()-.5)*3.5, sp:.15+Math.random()*.35,
+    rot:{x:Math.random()*.02,y:Math.random()*.02}};
+  orbit.add(m); particles.push(m);
+}
+heroGroup.add(orbit);
+
+// Slow-drifting rings (organic curves)
+const rings = [];
+for (let i=0;i<3;i++){
+  const r = new THREE.Mesh(
+    new THREE.TorusGeometry(2.2+i*.9, .012, 8, 120),
+    new THREE.MeshBasicMaterial({color:0x948B64, transparent:true, opacity:.35})
+  );
+  r.rotation.x = 1.2 + i*.15;
+  heroGroup.add(r); rings.push(r);
+}
+
+let mx=0, my=0;
+addEventListener('pointermove', e=>{
+  mx = (e.clientX/innerWidth - .5);
+  my = (e.clientY/innerHeight - .5);
+});
+
+addEventListener('resize', ()=>{
+  camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const clock = new THREE.Clock();
+let scrollY = 0;
+addEventListener('scroll', ()=>{ scrollY = window.scrollY; });
+
+function tick(){
+  requestAnimationFrame(tick);
+  const t = clock.getElapsedTime();
+  if (!reduced){
+    bean.rotation.y += .004;
+    bean.position.y = Math.sin(t*.8)*.18;
+    particles.forEach(p=>{
+      p.userData.a += p.userData.sp*.008;
+      p.position.set(Math.cos(p.userData.a)*p.userData.r, p.userData.y + Math.sin(t+p.userData.r)*.25, Math.sin(p.userData.a)*p.userData.r);
+      p.rotation.x += p.userData.rot.x; p.rotation.y += p.userData.rot.y;
+    });
+    rings[1].rotation.z = t*.06; rings[2].rotation.z = -t*.04;
+  }
+  // mouse parallax + scroll lift
+  camera.position.x += (mx*1.4 - camera.position.x)*.04;
+  camera.position.y += (-my*.9 - camera.position.y)*.04;
+  camera.lookAt(0,0,0);
+  heroGroup.position.y = scrollY*.004;
+  renderer.render(scene, camera);
+}
+tick();
+</script>
+</body>
+</html>
