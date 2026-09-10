@@ -130,7 +130,9 @@ if (renderer) {
   let variantMats = [];
   let variants = [];
 
-  gltfLoader.load('./watch-blender.glb', (gltf) => {
+  // cache-bust + absolute fallback: some CDNs/proxies cache a stale 404 for the GLB
+  const MODEL_URL = './watch-blender.glb?v=' + Date.now();
+  gltfLoader.load(MODEL_URL, (gltf) => {
     model = gltf.scene;
 
     // normalize scale + center
@@ -156,6 +158,25 @@ if (renderer) {
   }, (err) => {
     loaderEl.textContent = 'model failed: ' + (err && err.message ? err.message.slice(0,120) : 'unknown error');
     console.error('GLB load error:', err);
+    // retry once via absolute GitHub Pages URL (in case funnel route mangled the path)
+    if (!MODEL_URL.startsWith('http')) {
+      loaderEl.textContent = 'retrying via CDN…';
+      gltfLoader.load('https://ajmim.github.io/gara-3d-preview/watch-blender.glb', (gltf) => {
+        model = gltf.scene;
+        const box = new THREE.Box3().setFromObject(model);
+        const size = box.getSize(new THREE.Vector3());
+        const center = box.getCenter(new THREE.Vector3());
+        const scale = 2.6 / Math.max(size.x, size.y, size.z);
+        model.scale.setScalar(scale);
+        model.position.sub(center.multiplyScalar(scale));
+        scene.add(model);
+        loaderEl.classList.add('done');
+        renderer.render(scene, camera);
+      }, null, (e2) => {
+        loaderEl.textContent = 'model failed on both routes: ' + (e2 && e2.message ? e2.message.slice(0,80) : '');
+        console.error('GLB load error (CDN):', e2);
+      });
+    }
   });
 
   /* ---------- SCROLL RIG ---------- */
